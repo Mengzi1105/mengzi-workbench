@@ -1,0 +1,16 @@
+# Render Blueprint 配置（可选）
+# 作用：在 Render 新建 Web Service 时，连上含本文件的 Git 仓库即可一键部署。
+# 部署后云平台会把 process.env.PORT 注入；sync-server.js 已读取该变量。
+services:
+  - type: web
+    name: mengzi-workbench
+    runtime: node
+    plan: free
+    branch: main
+    buildCommand: "true"
+    startCommand: "node sync-server.js"
+    healthCheckPath: /
+    envVars:
+      - key: PORT
+        sync: false
+        value: "10000"

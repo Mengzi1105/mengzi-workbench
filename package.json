@@ -1,0 +1,12 @@
+{
+  "name": "mengzi-workbench-sync",
+  "version": "1.0.0",
+  "description": "萌子的小天地 —— 同步服务（零依赖 Node，可部署到 Render/Railway 等云平台）",
+  "main": "sync-server.js",
+  "scripts": {
+    "start": "node sync-server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
