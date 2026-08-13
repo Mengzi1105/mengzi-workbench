@@ -1492,13 +1492,16 @@
   }
   el('syncSave').addEventListener('click', function () {
     applySyncCfg(); el('syncModal').classList.remove('show');
-    Sync.pushAll(); Sync.pull(function () { rerenderCurrent(); });
+    Sync.pull(function () { Sync.pushAll(); rerenderCurrent(); });
   });
   el('syncNow').addEventListener('click', function () {
     applySyncCfg();
     el('syncStatus').textContent = '同步中…';
-    Sync.pushAll();
-    Sync.pull(function () { rerenderCurrent(); el('syncStatus').textContent = '✅ 已同步（' + new Date().toLocaleTimeString('zh-CN') + '）'; });
+    Sync.pull(function () {
+      Sync.pushAll();
+      rerenderCurrent();
+      el('syncStatus').textContent = '✅ 已同步（' + new Date().toLocaleTimeString('zh-CN') + '）';
+    });
   });
 
   // ============ 初始化 ============
@@ -1512,12 +1515,12 @@
   renderTodo();
   // 打开时先拉取一次云端（若有），之后每 30 秒及切回页面时自动同步
   Sync.pull(function () { rerenderCurrent(); });
-  setInterval(function () { Sync.pushAll(); Sync.pull(function () { invalidateCache(); }); }, 30000);
-  document.addEventListener('visibilitychange', function () { if (!document.hidden) { Sync.pushAll(); Sync.pull(function () { rerenderCurrent(); }); } });
+  setInterval(function () { Sync.pull(function () { Sync.pushAll(); invalidateCache(); }); }, 30000);
+  document.addEventListener('visibilitychange', function () { if (!document.hidden) { Sync.pull(function () { Sync.pushAll(); rerenderCurrent(); }); } });
   // 手机重新联网（如回到家连上 Wi-Fi）时，自动把离线期间新增的数据推上去并拉取，实现"回家自动补同步"
   window.addEventListener('online', function () {
     if (el('syncOn') && el('syncOn').checked) {
-      setTimeout(function () { Sync.pushAll(); Sync.pull(function () { rerenderCurrent(); }); }, 1500);
+      setTimeout(function () { Sync.pull(function () { Sync.pushAll(); rerenderCurrent(); }); }, 1500);
     }
   });
 })();
