@@ -235,6 +235,19 @@
   .l-item .l-del { border: none; background: transparent; cursor: pointer; font-size: 12px; color: var(--text-sub); padding: 6px 5px; border-radius: 6px; font-family: inherit; flex-shrink: 0; }
   .l-item .l-del:hover { color: var(--danger); background: var(--danger-soft); }
 
+  /* 本月资金去向总结 */
+  .la-title { font-size: 14px; font-weight: 700; margin: 18px 0 10px; color: var(--text); }
+  .la-body { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; background: var(--card); border: 1px solid var(--line); border-radius: var(--radius); padding: 14px; box-shadow: var(--shadow); }
+  .la-pie { flex-shrink: 0; }
+  .la-list { flex: 1; min-width: 210px; display: flex; flex-direction: column; gap: 9px; }
+  .la-row { display: flex; align-items: center; gap: 7px; font-size: 12.5px; }
+  .la-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+  .la-cat { width: 52px; flex-shrink: 0; color: var(--text); }
+  .la-bar { flex: 1; height: 8px; background: var(--line); border-radius: 5px; overflow: hidden; min-width: 40px; }
+  .la-fill { display: block; height: 100%; border-radius: 5px; }
+  .la-amt { width: 68px; text-align: right; font-weight: 700; color: var(--danger); flex-shrink: 0; }
+  .la-pct { width: 44px; text-align: right; color: var(--text-sub); flex-shrink: 0; }
+
   /* ===== 通用列表模块（备忘录/健身计划/饮食/可研/美食/旅行）===== */
   .gen-add {
     background: var(--card); border: 1px solid var(--line); border-radius: var(--radius);
@@ -522,6 +535,7 @@
             <button id="thisMonth">本月</button>
           </div>
           <div id="ledgerList"></div>
+          <div id="ledgerAnalysis"></div>
         </section>
 
       </div>
@@ -1010,6 +1024,44 @@
     });
     if (!html) html = '<div class="empty">' + y + '年' + m + '月还没有记账记录</div>';
     el('ledgerList').innerHTML = html;
+    renderLedgerAnalysis(items);
+  }
+  function renderLedgerAnalysis(items) {
+    var wrap = el('ledgerAnalysis');
+    if (!wrap) return;
+    var outs = items.filter(function (x) { return x.type === 'out'; });
+    var total = outs.reduce(function (s, x) { return s + x.amount; }, 0);
+    if (!outs.length || total <= 0) {
+      wrap.innerHTML = '<div class="la-title">本月资金去向</div><div class="empty">本月还没有支出记录</div>';
+      return;
+    }
+    var map = {};
+    outs.forEach(function (x) { map[x.cat] = (map[x.cat] || 0) + x.amount; });
+    var arr = Object.keys(map).map(function (k) { return { cat: k, amount: map[k] }; })
+      .sort(function (a, b) { return b.amount - a.amount; });
+    var colors = ['#d9a7a0', '#e0b489', '#d9c89a', '#a9c0a0', '#9fb6c9', '#b3a7c4', '#c9a7b3', '#a7c4c2', '#c4bfa7'];
+    var cx = 60, cy = 60, r = 52, start = -Math.PI / 2, paths = '';
+    arr.forEach(function (d, i) {
+      var ang = d.amount / total * Math.PI * 2, end = start + ang;
+      var x1 = cx + r * Math.cos(start), y1 = cy + r * Math.sin(start);
+      var x2 = cx + r * Math.cos(end), y2 = cy + r * Math.sin(end);
+      var large = ang > Math.PI ? 1 : 0;
+      paths += '<path d="M' + cx + ' ' + cy + ' L' + x1.toFixed(2) + ' ' + y1.toFixed(2) + ' A' + r + ' ' + r + ' 0 ' + large + ' 1 ' + x2.toFixed(2) + ' ' + y2.toFixed(2) + ' Z" fill="' + colors[i % colors.length] + '" stroke="#fff" stroke-width="1"></path>';
+      start = end;
+    });
+    var svg = '<svg viewBox="0 0 120 120" width="128" height="128" class="la-pie">' + paths +
+      '<circle cx="60" cy="60" r="30" fill="#fff"></circle>' +
+      '<text x="60" y="56" text-anchor="middle" font-size="9" fill="#999">支出</text>' +
+      '<text x="60" y="71" text-anchor="middle" font-size="11" font-weight="700" fill="#a26a5e">' + fmtMoney(total) + '</text></svg>';
+    var rows = arr.map(function (d, i) {
+      var pct = d.amount / total * 100;
+      return '<div class="la-row"><span class="la-dot" style="background:' + colors[i % colors.length] + '"></span>' +
+        '<span class="la-cat">' + esc(d.cat) + '</span>' +
+        '<span class="la-bar"><span class="la-fill" style="width:' + pct.toFixed(1) + '%;background:' + colors[i % colors.length] + '"></span></span>' +
+        '<span class="la-amt">' + fmtMoney(d.amount) + '</span>' +
+        '<span class="la-pct">' + pct.toFixed(1) + '%</span></div>';
+    }).join('');
+    wrap.innerHTML = '<div class="la-title">本月资金去向</div><div class="la-body">' + svg + '<div class="la-list">' + rows + '</div></div>';
   }
 
   // ============ 通用列表模块（备忘录/健身计划/饮食/可研/美食/旅行）============
