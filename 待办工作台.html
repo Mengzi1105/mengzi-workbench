@@ -605,6 +605,14 @@
     <input type="text" id="syncUrl" placeholder="http://localhost:8787">
     <div class="sync-tip">电脑和手机填<strong>同一个地址</strong>即可互通数据（需连同一 Wi-Fi）：<br>· 推荐用电脑主机名，换网络免改：<code>http://&lt;你的Mac名称&gt;.local:8787/</code><br>&nbsp;&nbsp;名称在 Mac「系统设置→通用→关于本机」，例如 <code>zhangsandeMacBook.local</code><br>· 或用局域网 IP：<code>http://192.168.x.x:8787</code>（Mac「系统设置→网络」查看，换 Wi-Fi 会变需重填）<br>· 电脑用启动器打开时默认就是本机地址，一般不用改。</div>
     <div class="sync-status" id="syncStatus"></div>
+    <hr style="border:none;border-top:1px dashed #ccc;margin:14px 0 6px;">
+    <div class="sync-tip" style="margin-bottom:8px;">📦 <strong>数据备份（防丢失）</strong>：把全部数据导出成文件存到手机/电脑；云端清空或换设备时用「导入恢复」。</div>
+    <div class="btns" style="margin-top:4px;">
+      <button class="ok" id="btnExport">⬇️ 导出备份</button>
+      <button class="ok" id="btnImport">⬆️ 导入恢复</button>
+      <input type="file" id="importFile" accept="application/json" hidden>
+    </div>
+    <div class="sync-status" id="backupStatus"></div>
     <div class="btns">
       <button class="ok" id="syncNow" style="margin-right:auto;">立即同步</button>
       <button class="cancel" id="syncCancel">关闭</button>
@@ -1502,6 +1510,42 @@
       rerenderCurrent();
       el('syncStatus').textContent = '✅ 已同步（' + new Date().toLocaleTimeString('zh-CN') + '）';
     });
+  });
+
+  // ---- 导出/导入 备份（防丢失）----
+  el('btnExport').addEventListener('click', function () {
+    try {
+      var out = {};
+      for (var i = 0; i < localStorage.length; i++) {
+        var k = localStorage.key(i);
+        out[k] = localStorage.getItem(k);
+      }
+      var blob = new Blob([JSON.stringify(out, null, 2)], { type: 'application/json' });
+      var a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = '萌子工作台备份_' + todayStr() + '.json';
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+      el('backupStatus').textContent = '✅ 已导出，请存到手机/电脑（换设备或云端清空时可用导入恢复）';
+    } catch (e) { el('backupStatus').textContent = '导出失败：' + e.message; }
+  });
+  el('btnImport').addEventListener('click', function () { el('importFile').click(); });
+  el('importFile').addEventListener('change', function () {
+    var f = this.files && this.files[0]; if (!f) return;
+    if (!confirm('导入会用备份文件覆盖当前全部数据，确定继续？建议先点「导出备份」留个底。')) { this.value = ''; return; }
+    var reader = new FileReader();
+    reader.onload = function () {
+      try {
+        var obj = JSON.parse(reader.result);
+        Object.keys(obj).forEach(function (k) { localStorage.setItem(k, obj[k]); });
+        try { Sync.pushAll(); } catch (e) {}
+        if (typeof invalidateCache === 'function') invalidateCache();
+        if (typeof rerenderCurrent === 'function') rerenderCurrent();
+        el('backupStatus').textContent = '✅ 已恢复并同步到云端';
+      } catch (e) { el('backupStatus').textContent = '导入失败：文件格式有误'; }
+    };
+    reader.readAsText(f);
+    this.value = '';
   });
 
   // ============ 初始化 ============
